@@ -14,7 +14,6 @@ namespace ParserWeb
         private IWebElement entityButton;
         private ILog log;
         private int maxStep = 60;
-
         public string TextEntityInn
         {
             get => entityInn.GetAttribute("value");
@@ -96,11 +95,38 @@ namespace ParserWeb
             if (driver.FindElements(By.TagName("span"))?.Any(a => msg.Contains(a.Text)) == true)
             {
                 log.Warn("Пустой результат запроса");
+                driver.FindElements(By.XPath("//button"))?.Where(a => a.Text == "Скрыть").FirstOrDefault()?.Click();
                 return true;
             }
                 
 
             return false;
+        }
+
+        private bool FindWaiter()
+        {
+            if (driver?.FindElements(By.Id("waiter"))?.Any(a => a.GetAttribute("class") == "waiter d-flex align-items-center show") == true)
+                return true;
+            return false;
+        }
+
+        private bool FindNoTable()
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    if (driver.FindElements(By.TagName("p")).Any(a => a.Text == "Не найдены формы статистической отчётности"))
+                        return true;
+                    return false;
+                }
+                catch 
+                {
+                    System.Threading.Thread.Sleep(1000);
+                }
+            }
+
+            throw new Exception("Ошибка при загрузке страницы. #4");
         }
 
         public void FindTableInPage(Organization organization)
@@ -116,9 +142,18 @@ namespace ParserWeb
 
 
 
-            for (int i = 0; i < maxStep; i++)
+            for (int i = 0; i < 10; i++)
             {
+                log.Debug("Ожидание загрузки страницы ....");
+
+                while (FindWaiter())
+                {
+                    
+                }
+
                 log.Debug(String.Format("Поиск таблицы на странице. Попытка {0}", i + 1));
+
+
 
                 // Если с первого раза мы не получаем таблицу то смотрим есть ли ошибки на странице
                 if (i > 0)
@@ -126,6 +161,8 @@ namespace ParserWeb
                     if (FindErrorInTable())
                         return;
                 }
+
+
 
                 foreach (IWebElement table in driver.FindElements(By.TagName("table"))?.Where(a => a.GetAttribute("class").Contains("ng-star-inserted")))
                 {
@@ -179,7 +216,7 @@ namespace ParserWeb
                 System.Threading.Thread.Sleep(1000);
             }
 
-            throw new Exception("Ожидание таблицы превысило максимального значения");
+            log.Warn("Ожидание таблицы превысило максимального значения");
 
         }
     }
